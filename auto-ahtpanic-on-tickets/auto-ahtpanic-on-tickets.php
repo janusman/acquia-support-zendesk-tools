@@ -8,7 +8,7 @@ function search_tickets() {
 
   // Set time to UTC and get date.
   date_default_timezone_set("UTC");
-  $since_date = date("Y-m-d\TH:00:00\Z", time() - (3600 * 5));
+  $since_date = date('Y-m-d\TH:00:00\Z', time() - (3600 * 5));
   // Only recent tickets...
   $query = " created>=$since_date";
   // Ticket types we want...
