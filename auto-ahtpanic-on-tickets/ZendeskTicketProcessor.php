@@ -93,12 +93,12 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
         $parsed = parse_url($line);
         $urls[] = strtolower($parsed['scheme']) . '://' . strtolower($parsed['host']);
       }
-      return $urls;
     }
+    return $urls;
   }
 
   function ticketMeetsRequirements() {
-    // Get the example URLs field from ticket. (Which is a free Textfield)
+    // Get the example URLs field from ticket. (Which is a Textfield)
     $example_urls = zendesk_get_custom_field($this->ticket, 23786337);
     if ($example_urls && isset($example_urls->value)) {
       // Extract URLs from text.
@@ -112,24 +112,19 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
         }
       }
     }
-    // TODO: Try just going to @site.env using the UUID from the ticket
-    // aht cci request aht/subscription/f80432f4-d731-7444-f99b-42d36c443306/info |grep docroot
-    // ==> docroot: tribune1
+    // If no URLs found, try a fallback.
     if (empty($this->storage['url'])) {
-      $this->log("No example URL found in ticket");
-
-      // Attempt fallback
       if ($this->ticket->subject == "Service Interruption Detected on your Production Environment") {
+        // Get the docroot using CCI.
         $docroot = $this->getSitenameFromSubscription();
         if ($docroot) {
           $this->storage['url'] = '@' . $docroot . '.prod';
           return parent::ticketMeetsRequirements();
         }
       }
-      #print_r($this->ticket);
       return FALSE;
     }
-    // Make sure this URL belongs to an Acquia site
+    // Make sure any example URL used belongs to an Acquia site
     $doesnt_exist = exec('aht find:domain ' . $this->storage['url'] .' --no-ansi |grep -c "not found"');
     if ($doesnt_exist == "1") {
       $this->log("No acquia site found associated to URL " . $this->storage['url']);
@@ -215,9 +210,11 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
     }
 
     $comment = 'Attaching a run of command `ahtpanic.sh ' . $this->storage['url'] . '`.';
-    $comment .= ' (Took ' . $command_result['elapsed_time'] . " secs).\n";
+    if (isset($command_result['elapsed_time'])) {
+      $comment .= ' (Took ' . $command_result['elapsed_time'] . " secs).\n";
+    }
     $comment .= "\n";
-    $comment .= "[Leave feedback here!](https://docs.google.com/spreadsheets/d/1v-jVOmpt_gP9MJ2cl3dxhfG7tCcumV4Tgc5FCnn1AO4/edit#gid=0).\n";
+    $comment .= "[Leave feedback for autopanic](https://docs.google.com/spreadsheets/d/1v-jVOmpt_gP9MJ2cl3dxhfG7tCcumV4Tgc5FCnn1AO4/edit#gid=0).\n";
     $comment .= "*\"I panic so you don't have to!\" @xvr10000*";
     $action = [
       'type' => "postCommentAndFile",
@@ -229,6 +226,7 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
     ];
     $this->queueAction($action);
 
+    return TRUE;
   }
 }
 
