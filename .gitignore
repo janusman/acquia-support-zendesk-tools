@@ -1,0 +1,4 @@
+*.txt
+*.json
+*.log
+.idea/
