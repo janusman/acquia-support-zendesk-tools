@@ -1,13 +1,35 @@
-#!/bin/sh
+#!/bin/bash
 # parse-solr-config-ticket.sh
 # https://gist.github.com/janusman/e6365dc999c41a133cf6
 
+# See http://linuxtidbits.wordpress.com/2008/08/11/output-color-on-bash-scripts/
+COLOR_RED=$(tput setaf 1) #"\[\033[0;31m\]"
+COLOR_YELLOW=$(tput setaf 3) #"\[\033[0;33m\]"
+COLOR_GREEN=$(tput setaf 2) #"\[\033[0;32m\]"
+COLOR_GRAY=$(tput setaf 7) #"\[\033[2;37m\]"
+COLOR_NONE=$(tput sgr0) #"\[\033[0m\]"
+
+function errmsg() {
+  echo "${COLOR_RED}$1${COLOR_NONE}"
+}
+
+function warnmsg() {
+    echo "${COLOR_YELLOW}$1${COLOR_NONE}"
+}
+
+function header() {
+  echo ""
+  echo "${COLOR_GRAY}._____________________________________________________________________________"
+  echo "|${COLOR_GREEN}  $1${COLOR_NONE}"
+}
+
+
 if [ ${1:-x} = x ]
 then
-  echo "Usage: $0 [ticket-id]"
+  echo "${COLOR_YELLOW}Usage: $0 ticket-number"
   echo 
   echo "Tries to automate custom configuration tickets by downloading all attachments"
-  echo " and detect any core IDs mentioned in ticket comments."
+  echo " and detect any core IDs mentioned in ticket comments.$COLOR_NONE"
   exit 0
 fi
 
@@ -17,13 +39,10 @@ CREDS_FILE=creds.txt
 
 if [ ! -r creds.txt ]
 then
-  echo "Place a one-liner into a creds.txt file, with this information:"
-  echo ""
-  echo "YourEmail@acquia.com:PassWordUsedToLogIntoZendesk"
-  echo ""
-  echo "Or, a ZD API token string:"
-  echo ""
-  echo "YourEmail@acquia.com/token:TokenString"
+  errmsg "Place a one-liner into a creds.txt file, with this information:"
+  errmsg "  YourEmail@acquia.com:PassWordUsedToLogIntoZendesk"
+  errmsg "Or, a ZD API token string:"
+  errmsg "  YourEmail@acquia.com/token:TokenString$COLOR_NONE"
   exit 0
 fi
 credentials=`cat $CREDS_FILE`
@@ -31,11 +50,12 @@ curl -su $credentials https://acquia.zendesk.com/api/v2/tickets/${ticket}/commen
 
 if [ `grep -c "Couldn't authenticate you" $tmpout` -eq 1 ]
 then
-  echo "Couldn't authenticate against Zendesk. Make sure $CREDS_FILE has the correct credentials."
+  errmsg "Couldn't authenticate against Zendesk. Make sure $CREDS_FILE has the correct credentials."
   exit 1
 fi
 
 # Do some maintenance to keep temp folders manageable
+header "Housekeeping..."
 echo "Deleting really old folders (>100 days)"
 find old -maxdepth 1 -type d -mtime +90 -name 'z*' -print -exec rm -rf "{}" \;
 
@@ -50,6 +70,7 @@ cd $DEST_FOLDER
 echo "Created destination folder $DEST_FOLDER/"
 
 # Process comments and download attachments
+header "Processing ticket"
 cat $tmpout |php -r '
 
 function sep() {
@@ -118,7 +139,7 @@ foreach ($cores as $core) {
   file_put_contents("{$core}.sh", $script);
   echo "Wrote script to {$core}.sh\n";
 }
-'
+' | egrep --color '^|[A-Z][A-Z][A-Z][A-Z]-[0-9][0-9][0-9][0-9][0-9][0-9]*(\.[a-z0][a-z1][a-zA-Z0-9]*\.[a-zA-Z0-9]*|_[a-zA-Z0-9]*|)'
 
 # unzip any applicable files
 folder=`pwd`
@@ -144,15 +165,17 @@ do
 done
 
 cd ..
+header "DONE"
 echo ""
-echo "====================================================="
-echo "| DONE!!"
-echo "====================================================="
-echo ""
-echo "Created destination folder $DEST_FOLDER/"
+echo "  ${COLOR_GREEN}Created destination folder $DEST_FOLDER/"
 echo "  All applicable attachments were downloaded to $DEST_FOLDER/ticketfiles:"
 ls -l ticketfiles | awk 'NR>1 {print "    " $0 }'
 echo ""
 echo "  You can now run these scripts in this folder to process each mentioned index:"
 ls *.sh | awk '{print "    " $0 }'
+
+echo 'for nom in *.sh; do bash $nom; done' >run-all && chmod +x run-all
 echo ""
+echo "  Or, you can process all cores now by typing this:"
+echo "      cd z${ticket}; ./run-all"
+echo "$COLOR_NONE"

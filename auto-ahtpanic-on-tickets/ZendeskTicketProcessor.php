@@ -97,6 +97,7 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
     return $urls;
   }
 
+  // Determines if we will or will not process this ticket.
   function ticketMeetsRequirements() {
     // Get the example URLs field from ticket. (Which is a Textfield)
     $example_urls = zendesk_get_custom_field($this->ticket, 23786337);
@@ -168,6 +169,7 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
     ];
   }
 
+  // Function that look at each ticket and determines the action to take.
   function processTicket() {
     // Run on the hostname.
     $this->log("Starting processTicket() using " . $this->storage['url']);
@@ -191,8 +193,13 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
       }
     }
 
-    if (exec("egrep -c 'RuntimeException|InvalidArgumentException' {$output_basename}.txt") != '0') {
+    if (exec("egrep -c '\\[(RuntimeException|InvalidArgumentException)' {$output_basename}.txt") != '0') {
       $this->log("Output of the command has Exception messages. Aborting!");
+      return FALSE;
+    }
+
+    if (exec("egrep -c 'an application with that name exists on multiple realms' {$output_basename}.txt") != '0') {
+      $this->log("Command wasn't able to figure out the site. Aborting!");
       return FALSE;
     }
 
@@ -209,13 +216,13 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
       return FALSE;
     }
 
-    $comment = 'Attaching a run of command `ahtpanic.sh ' . $this->storage['url'] . '`.';
+    // Finally, queue the "add the comment" action here.
+    $comment = '**AutoPanic** ran and attached a run of command `ahtpanic.sh ' . $this->storage['url'] . '`.';
     if (isset($command_result['elapsed_time'])) {
       $comment .= ' (Took ' . $command_result['elapsed_time'] . " secs).\n";
     }
     $comment .= "\n";
-    $comment .= "[Leave feedback for autopanic](https://docs.google.com/spreadsheets/d/1v-jVOmpt_gP9MJ2cl3dxhfG7tCcumV4Tgc5FCnn1AO4/edit#gid=0).\n";
-    $comment .= "*\"I panic so you don't have to!\" @xvr10000*";
+    $comment .= "[ [leave feedback for AutoPanic](https://docs.google.com/a/acquia.com/forms/d/e/1FAIpQLSdPKAuQa-V3lEpqrSl8fala7ExJuSpHdOeLKuGRnhbnf5fO2Q/viewform?usp=pp_url&entry.516642626=" . $this->ticket->id . "&entry.64614507) ] *\"I panic so you don't have to!\"* @xvr10000";
     $action = [
       'type' => "postCommentAndFile",
       'args' => [
