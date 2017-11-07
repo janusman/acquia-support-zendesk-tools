@@ -1,10 +1,15 @@
 #!/opt/lampp/bin/php
 <?php
 
+/**
+ * Command-line tool to process a single ticket.
+ */
+
 require '../zendesk_api.php.inc';
 require 'ZendeskTicketProcessor.php';
 
 if (empty($argv[1])) {
+  echo "Runs the ZendeskTicketProcessorAhtpanicrunner class on one ZD ticket.\n";
   echo "Usage: " . $argv[0] . " [zendesk-ticket-number]\n";
   exit;
 }

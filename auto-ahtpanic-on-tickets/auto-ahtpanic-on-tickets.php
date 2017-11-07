@@ -26,8 +26,11 @@ $query = ' created>=' . gmdate('Y-m-d\TH:00:00\Z', time() - (3600 * HOURS_BACK))
 $query .= ' status<=open type:ticket priority>=normal group:"Acquia network support"';
 // Omit tickets that we've already touched.
 $query .= ' -@xvr10000';
+
+// Get tickets
 $tickets = get_zd_tickets_using_query($query);
 
+// Process each ticket.
 foreach ($tickets as $ticket) {
   $runner = new ZendeskTicketProcessorAhtpanicrunner($ticket);
   $runner->execute();

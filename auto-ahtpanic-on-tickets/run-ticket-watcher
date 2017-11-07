@@ -1,3 +1,15 @@
 #!/bin/bash
-echo "Starting script!"
-while [ 1 ] ; do   (date && php -f auto-ahtpanic-on-tickets.php && echo "==========") |tee -a auto-ahtpanic-on-tickets.log; sleep 120; done
+
+# Constants
+sleep_time=120
+logfile=auto-ahtpanic-on-tickets.log
+
+# Main
+echo "Starting ticket watcher script: pausing ${sleep_time} seconds between runs."
+echo "  Writing output log to $logfile"
+echo "  Hit CTRL-C to break."
+echo ""
+while [ 1 ] ; do
+  (date && php -f auto-ahtpanic-on-tickets.php && echo "==========") |tee -a $logfile;
+  sleep $sleep_time;
+done
