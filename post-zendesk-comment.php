@@ -22,4 +22,4 @@ if (! $comment_body = @file_get_contents($comment_file)) {
 if (! is_file($attachment_file)) {
   die("Can't read file $attachment_file\n");
 }
-post_comment_and_file($ticket_number, $comment_body, $attachment_file, $is_public);
+zendesk_post_comment_and_file($ticket_number, $comment_body, $attachment_file, $is_public);
