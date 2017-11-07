@@ -97,7 +97,7 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
     return $urls;
   }
 
-  // Determines if we will or will not process this ticket.
+  // Determines if we will process this ticket or not.
   function ticketMeetsRequirements() {
     // Get the example URLs field from ticket. (Which is a Textfield)
     $example_urls = zendesk_get_custom_field($this->ticket, 23786337);
@@ -181,7 +181,7 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
     }
 
     if (!file_exists("{$output_basename}.txt")) {
-      $cmd = "/home/alejandrogarza/Dev/Support-Tools/bin/ahtpanic.sh";
+      $cmd = "ahtpanic.sh";
       $cmd .= " " . $this->storage['url'] . " 2>&1 >{$output_basename}.txt";
 
       // Execute with a timeout of 300.
@@ -236,4 +236,3 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
     return TRUE;
   }
 }
-

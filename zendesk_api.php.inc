@@ -5,12 +5,37 @@ define("ZD_URL", "https://acquia.zendesk.com/api/v2");
 define("ZD_CREDS_FILE", __DIR__ . "/creds.txt");
 define("ZD_USERAGENT", "AcquiaAlejandroGarza/1.0");
 
+function colorize($text, $status = "SUCCESS") {
+ $out = "";
+ switch($status) {
+  case "SUCCESS":
+   $out = "[42m"; //Green background
+   break;
+  case "FAILURE":
+   $out = "[41m"; //Red background
+   break;
+  case "WARNING":
+   $out = "[43m"; //Yellow background
+   break;
+  case "NOTE":
+   $out = "[44m"; //Blue background
+   break;
+  default:
+   throw new Exception("Invalid status: " . $status);
+ }
+ return chr(27) . $out . $text . chr(27) . "[0m\n";
+}
+
 function zendesk_curl($url, $json, $action)
 {
   if (substr($url, 0, 1) != "/") {
     die("Wrong URL given: $url");
   }
-  $creds = trim(file_get_contents(ZD_CREDS_FILE));
+  $creds = trim(@file_get_contents(ZD_CREDS_FILE));
+  if (empty($creds)) {
+    echo colorize ("ERROR: You should have a creds.txt file on folder " . __DIR__, "FAILURE");
+    die();
+  }
   $ch = curl_init();
   curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
   curl_setopt($ch, CURLOPT_MAXREDIRS, 10 );
