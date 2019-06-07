@@ -2,6 +2,13 @@
 BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $BASE_DIR
 
+# Check requirements
+if [ ! -r ../creds.txt ]
+then
+  echo "ERROR: You should have a creds.txt file on folder "`pwd`
+  exit 1
+fi
+
 # Constants
 sleep_time=120
 logfile=auto-ahtpanic-on-tickets.log
