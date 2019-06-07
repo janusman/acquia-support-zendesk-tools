@@ -1,4 +1,6 @@
 #!/bin/bash
+BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd $BASE_DIR
 
 # Constants
 sleep_time=120
