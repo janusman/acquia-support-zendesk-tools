@@ -84,6 +84,7 @@ class SupportSuggesterMatcherService {
       
       // Send into data array.
       $data[] = [
+        'row_num' => $row_num,
         'match_string' => $match_string,
         'title' => $title,
         'url' => $url,
