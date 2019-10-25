@@ -15,7 +15,7 @@ INSTALL_FOLDER=$HOME/auto-ahtpanic-zendesk
 
 if [ -r $INSTALL_FOLDER ]
 then
-  echo "Already installed"
+  echo "Already installed at $INSTALL_FOLDER"
   exit 1
 fi
   
@@ -29,7 +29,7 @@ git clone git@github.com:janusman/Support-Tools.git -b ahtpanic-improvements-201
 git clone git@github.com:janusman/acquia-support-zendesk-tools.git
 
 # Add Zendesk API token.
-echo -n "Enter Zendesk API token: (format = example@acquia.com/token:XXXXXXXXXXX)"
+echo -n "Enter Zendesk API token (format = example@acquia.com/token:XXXXXXXXXXX): "
 read token
 echo "$token" >acquia-support-zendesk-tools/creds.txt
 
@@ -53,8 +53,10 @@ cat <<EOF >run-ticket-watcher
 $INSTALL_FOLDER/acquia-support-zendesk-tools/auto-ahtpanic-on-tickets/run-ticket-watcher
 EOF
 
+# Install ansi2html
 curl http://www.pixelbeat.org/scripts/ansi2html.sh >ansi2html
 
+# Make commands in $INSTALL_FOLDER/bin executable
 chmod +x ansi2html aht ahtpanic.sh ansi2html run-ticket-watcher
 
 cat <<EOF
@@ -62,7 +64,10 @@ cat <<EOF
 ================================
 INSTALLATION DONE!
 
-You can run the script this way:
+Installation path: $INSTALL_FOLDER
+  Commands are in: $INSTALL_FOLDER/bin
+
+You can run the monitoring script this way:
 
 export PATH=\$PATH:$INSTALL_FOLDER/bin
 run-ticket-watcher
