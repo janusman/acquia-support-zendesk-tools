@@ -64,6 +64,6 @@ INSTALLATION DONE!
 
 You can run the script this way:
 
-export PATH=$PATH:$INSTALL_FOLDER/bin
+export PATH=\$PATH:$INSTALL_FOLDER/bin
 run-ticket-watcher
 EOF
