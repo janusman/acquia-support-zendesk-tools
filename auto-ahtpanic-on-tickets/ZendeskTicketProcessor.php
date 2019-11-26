@@ -21,6 +21,7 @@ abstract class ZendeskTicketProcessor {
     echo debug_backtrace()[1]['function'] . "() -> $msg\n";
   }
 
+  // Add an action to the queue.
   function queueAction($action) {
     if (!isset($action['type'])) {
       die("ERROR: queueAction(): Missing action type");
@@ -32,12 +33,14 @@ abstract class ZendeskTicketProcessor {
     $this->log("Queued the action " . $action['type']);
   }
 
+  // Execute all queued actions.
   function runActionQueue() {
     foreach ($this->action_queue as $action) {
       $this->runAction($action);
     }
   }
 
+  // Execute a single action from the queue.
   function runAction($action) {
     switch ($action['type']) {
       case "postCommentAndFile":
@@ -60,6 +63,7 @@ abstract class ZendeskTicketProcessor {
     }
   }
 
+  // Return true when the ticket meets the requirements.
   function ticketMeetsRequirements() {
     if (empty($this->ticket->id)) {
       return false;
@@ -253,6 +257,12 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
     ];
   }
 
+  // Clean up both output files for a "second chance"
+  function removeOutputFiles($output_basename) {
+    @unlink("{$output_basename}.txt");
+    @unlink("{$output_basename}-summary.txt");
+  }
+
   // Function that look at each ticket and determines the action to take.
   function processTicket() {
     // Run on the hostname.
@@ -279,18 +289,22 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
       }
     }
 
-    if (exec("egrep -c '\\[(RuntimeException|InvalidArgumentException)' {$output_basename}.txt") != '0') {
-      $this->log("Output of the command has Exception messages. Aborting!");
+    if (exec("grep -c 'You do not have an open connection to the server' {$output_basename}.txt") != '0') {
+      $this->log("Could not connect to Bastion. Aborting!");
+      // Clean up both output files for a "second chance"
+      $this->removeOutputFiles($output_basename);
       return FALSE;
     }
 
     if (exec("egrep -c 'an application with that name exists on multiple realms' {$output_basename}.txt") != '0') {
-      $this->log("Command wasn't able to figure out the site. Aborting!");
+      $this->log("Command wasn't able to figure out the realm/stage for the site. Aborting!");
       return FALSE;
     }
 
     if (exec("fgrep -c '^C' {$output_basename}.txt") != '0') {
       $this->log("Output of the command had ^C (breaks). Aborting!");
+      // Clean up both output files for a "second chance"
+      $this->removeOutputFiles($output_basename);
       return FALSE;
     }
 
