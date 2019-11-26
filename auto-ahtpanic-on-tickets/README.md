@@ -19,3 +19,5 @@ Requirements:
 
 * aht
 * ahtpanic.sh
+* php
+

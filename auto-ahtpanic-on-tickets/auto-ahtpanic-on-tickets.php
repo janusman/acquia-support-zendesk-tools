@@ -32,6 +32,7 @@ function attempt_ticket_match_against_support_ticket_suggester($matcher_service,
   }
 }
 
+/** Unused...
 function has_ticket_been_processed($ticket_id, $set_processed = false) {
   static $ticket_processed_cache = [];
   $max_items = 50;
@@ -60,6 +61,7 @@ function has_ticket_been_processed($ticket_id, $set_processed = false) {
 
   return $result;
 }
+**/
 
 function run_process_on_matching_tickets($query) {
   // Get tickets
