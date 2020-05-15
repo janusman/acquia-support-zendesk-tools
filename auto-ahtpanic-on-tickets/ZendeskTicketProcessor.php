@@ -112,11 +112,19 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
   // Extract URLs via regex
   function extractUrlsRegex($text) {
     $urls = [];
-    preg_match_all("/[a-z][a-z][a-z0-9]*\.[a-z0-9][a-z0-9][a-z0-9\.]*/", $text, $results);
-    // Extract first string that looks like a domain that actually returns an IP.
-    foreach ($results[0] as $result) { 
+    preg_match_all("/[a-z][a-z][a-z0-9]*\.[a-z0-9][a-z0-9][a-z0-9\.-]*[a-z0-9]/", $text, $results);
+    // Extract first string that looks like a domain that actually returns an IP
+    // AND meets valid URLs.
+    foreach ($results[0] as $result) {
       if (FALSE !== gethostbynamel($result)) {
-        $urls[] = $result;
+        if (strpos($result, ".acquia.com") === FALSE) {
+          $urls[] = $result;
+        }
+      }
+      else {
+        if (@dns_get_record($result)) {
+          $urls[] = $result;
+        }
       }
     }
     return $urls;
@@ -147,11 +155,16 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
       // Extract URLs from text.
       $urls = $this->parseUrls($example_urls->value);
 
-      // Remove URLs that have acquia.com in the domain
+      // Remove some URLs
       foreach ($urls as $n => $url) {
         if (
+            #domains that have acquia.com in the domain
             strpos($url, ".acquia.com") !== FALSE
-            #|| strpos($url, ".acsitefactory.com") !== FALSE
+            #domains that have example.com in the domain
+            || strpos($url, ".example.com") !== FALSE
+            # Some common domains which aren't valid
+            || strpos($url, "youtube.com") !== FALSE
+            || strpos($url, "google.com") !== FALSE
           ) {
           $this->log("Ignoring mentioned example URL $url");
           unset($urls[$n]);
@@ -159,8 +172,11 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
       }
 
       if (count($urls)>0) {
-        $urls = $this->filterAcquiaHostedDomains($urls);
-
+        $acquia_filtered_urls = $this->filterAcquiaHostedDomains($urls);
+        if (count($acquia_filtered_urls) == 0) {
+          $this->log("No example URLs belong to Acquia Hosting: " . implode(' ', $urls));
+        }
+        $urls = $acquia_filtered_urls;
         // Store the hostname to trigger on.
         $this->storage['url'] = reset($urls);
         if (count($urls)>1) {
@@ -177,46 +193,69 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
         $docroot = $this->getSitenameFromSubscription();
         if ($docroot) {
           $this->storage['url'] = 'http://' . $docroot . '.prod.acquia-sites.com';
+          // Override if site looks like ACSF.
+          // @TODO: Better detection method?
+          if (stripos($this->ticket->description, "ACSF") !== FALSE) {
+            $this->storage['url'] = 'http://' . $docroot . '01live.enterprise-g1.acquia-sites.com';
+          }
           // We do not want to run the further URL checks below, so let's return now.
           return parent::ticketMeetsRequirements();
         }
       }
 
-      // Fallback 2: text on the ticket description that matches /mnt/www/html/[sitename-with-dots]
-      if (preg_match('%/mnt/(www/html|gfs)/([a-z][a-z0-9]*\.[a-z0-9]*)/%', $this->ticket->description, $matches)) {
+      // Fallback: text from the ticket title has 1+ URLs
+      if (empty($this->storage['url']) && $urls = $this->extractUrlsRegex($this->ticket->subject)) {
+        // Filter for only valid URLs
+        $urls = $this->filterAcquiaHostedDomains($urls);
+        if ($url = reset($urls)) {
+          $this->storage['url'] = $url;
+          $this->log("URL detection fallback: Found URLs in ticket subject.");
+        }
+      }
+      // Fallback: text from the ticket description has 1+ URLs
+      if (empty($this->storage['url']) && $urls = $this->extractUrlsRegex($this->ticket->description)) {
+        // Filter for only valid URLs
+        $urls = $this->filterAcquiaHostedDomains($urls);
+        if ($url = reset($urls)) {
+          $this->storage['url'] = $url;
+          $this->log("URL detection fallback: Found URLs in ticket description.");
+        }
+      }
+      // Fallback: text on the ticket description that matches /mnt/www/html/[sitename-with-dots]
+      if (empty($this->storage['url']) && preg_match('%/mnt/(www/html|gfs)/([a-z][a-z0-9]*\.[a-z0-9]*)/%', $this->ticket->description, $matches)) {
         $sitename = $matches[2];
         $this->storage['url'] = '@' . $sitename;
+        $this->log("URL detection fallback: Found " . $matches[0] . " in ticket subject, using URL " . $this->storage['url']);
         // We do not want to run the further URL checks below, so let's return now.
         return parent::ticketMeetsRequirements();
       }
-      // Fallback 3: text on the ticket description that matches /var/www/site-php/[sitename-with-no-dots]
-      if (preg_match("%/var/www/site-php/([a-z][a-z0-9]*)/([a-z][a-z0-9]*)-%", $this->ticket->description, $matches)) {
+      // Fallback: text on the ticket description that matches /mnt/www/html/[sitename-with-NO-dots]
+      if (empty($this->storage['url']) && preg_match('%/mnt/(www/html|gfs)/([a-z][a-z0-9]*)/%', $this->ticket->description, $matches)) {
+        $sitename = $matches[2];
+        $this->storage['url'] = "http://{$sitename}.prod.acquia-sites.com";
+        $this->log("URL detection fallback: Found " . $matches[0] . " in ticket subject, using URL " . $this->storage['url']);
+      }
+      // Fallback: text on the ticket description that matches /var/www/site-php/[sitename-with-no-dots]
+      if (empty($this->storage['url']) && preg_match('%/var/www/site-php/([a-z][a-z0-9]*)/([a-z][a-z0-9]*)-%', $this->ticket->description, $matches)) {
         if ($matches[1] === $matches[2]) {
           $sitename = $matches[1];
           $this->storage['url'] = "http://{$sitename}.prod.acquia-sites.com";
+          $this->log("URL detection fallback: Found " . $matches[0] . " in ticket subject, using URL " . $this->storage['url']);
         }
       }
-      // Fallback 4: text on the ticket description that matches /mnt/www/html/[sitename-with-no-dots]
-      if (preg_match("%/mnt/(www/html|gfs)/([a-z][a-z0-9]*)/%", $this->ticket->description, $matches)) {
-        $sitename = $matches[2];
-        $this->storage['url'] = "http://{$sitename}.prod.acquia-sites.com";
-      }
-      // Fallback 5: text from the ticket title has 1+ URLs
-      if ($urls = $this->extractUrlsRegex($this->ticket->subject)) {
-        // Filter for only valid URLs
-        $urls = $this->filterAcquiaHostedDomains($urls);
-        $this->storage['url'] = reset($urls);
+    }
+
+    // Make sure any example URL used belongs to an Acquia site
+    if (!empty($this->storage['url'])) {
+      if (!$this->domainIsAcquiaHosted($this->storage['url'])) {
+        $this->log("No acquia site found associated to URL " . $this->storage['url']);
+        unset($this->storage['url']);
       }
     }
 
     // If fallbacks got nothing, then return FALSE;
     if (empty($this->storage['url'])) {
-      return FALSE;
-    }
-
-    // Make sure any example URL used belongs to an Acquia site
-    if (!$this->domainIsAcquiaHosted($this->storage['url'])) {
-      $this->log("No acquia site found associated to URL " . $this->storage['url']);
+      $this->log("Could not determine URL (or @site.env) to run checks on.");
       return FALSE;
     }
 
