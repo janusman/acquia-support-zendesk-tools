@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# Checks if the `php -f auto-ahtpanic-on-tickets.php` process is running AND has been
+# running for more than 30 minutes. If so, kill the process!
+
+# Example: running since 21:44 hours ago
+#
+#~$ ps -eo etime,pid,cmd |grep "[p]hp -f auto-ahtpanic-on-tickets.php"
+# 09:44 11325 php -f auto-ahtpanic-on-tickets.php
+#
+# Get the start "time ago" in minutes...
+#
+#~$ ps -eo bsdstart,pid,cmd |grep "[p]hp -f auto-ahtpanic-on-tickets.php" |awk '{print $1 }' |awk -F: '{ print ($1*60) + $2 }'
+#1304
+#
+# Get the pid...
+#
+#~$ ps -eo etime,pid,cmd |grep "[p]hp -f auto-ahtpanic-on-tickets.php" |awk '{print $2 }'
+#11325
+
+minutes=`ps -eo etime,pid,cmd |grep "[p]hp -f auto-ahtpanic-on-tickets.php" |awk '{print $1 }' |awk -F: '{ if (NF==3) { print ($1*60) + $2; } if (NF==2) { print $1; } }'`
+if [ "${minutes:-x}" = x ]
+then
+  exit 0
+fi
+
+# If not stuck, exit.
+if [ $minutes -lt 30 ]
+then
+  echo `date`": OK: Process running for $minutes minutes. Exiting."
+  exit 0
+fi
+
+echo `date`": Process seems stuck! Running since $minutes minutes ago. Killing..."
+pid=`ps -eo etime,pid,cmd |grep "[p]hp -f auto-ahtpanic-on-tickets.php" |awk '{print $2 }'`
+kill -9 $pid
+echo `date`": Killed process $pid"
+
