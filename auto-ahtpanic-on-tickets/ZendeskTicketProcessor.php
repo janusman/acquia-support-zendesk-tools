@@ -8,10 +8,29 @@ abstract class ZendeskTicketProcessor {
   protected $action_queue = array();
   protected $action_types = ['postCommentAndFile', 'postComment'];
   protected $storage = array();
+  protected $outputBasename = '';
 
   function __construct($ticket) {
     date_default_timezone_set("America/New_York");
     $this->ticket = $ticket;
+    $this->setOutputBasename();
+  }
+  
+  // Set the destination files' basename
+  function setOutputBasename($path = null) {
+    if (empty($path)) {
+      $date = gmdate("Ymd");
+      $path = "/mnt/tmp/ZendeskTicketProcessor/AutoPanic-{$date}-ticket-" . $this->ticket->id;
+    }
+    $this->outputBasename = $path;
+  }
+
+  // Clean up both output files for a "second chance"
+  function removeOutputFiles() {
+    $output_basename = $this->outputBasename;
+    @unlink("{$output_basename}.txt");
+    @unlink("{$output_basename}-summary.txt");
+    @unlink("{$output_basename}.html");
   }
 
   function log($msg) {
@@ -295,18 +314,12 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
       'timed_out' => ($result_code == "124"),
     ];
   }
-
-  // Clean up both output files for a "second chance"
-  function removeOutputFiles($output_basename) {
-    @unlink("{$output_basename}.txt");
-    @unlink("{$output_basename}-summary.txt");
-  }
-
+  
   // Function that look at each ticket and determines the action to take.
   function processTicket() {
     // Run on the hostname.
     $this->log("Starting processTicket() using " . $this->storage['url']);
-    $output_basename = "/mnt/tmp/" . get_class($this) . "-ticket-" . $this->ticket->id;
+    $output_basename = $this->outputBasename;
 
     if (file_exists("{$output_basename}.html")) {
       $this->log("File {$output_basename}.html already exists. Skipping attaching this to ticket.");
