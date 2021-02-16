@@ -333,7 +333,7 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
       $cmd .= " 2>&1 >{$output_basename}.txt";
 
       // Execute with a timeout of 300.
-      $command_result = $this->runCommandWithTimeout($cmd, 30);
+      $command_result = $this->runCommandWithTimeout($cmd, 300);
 
       if ($command_result['timed_out']) {
         $this->log("Command timed out!");
