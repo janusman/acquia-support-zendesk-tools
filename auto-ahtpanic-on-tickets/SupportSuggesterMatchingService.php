@@ -21,13 +21,13 @@
  *  )
  *
  */
- 
+
 class SupportSuggesterMatcherService {
 
   protected $mappings = [];
   protected $status_filter = ['released'];
   protected $caching_enabled = true;
-  
+
   function __construct(
     $status_filter = ["released"],
     $caching_enabled = true
@@ -36,7 +36,7 @@ class SupportSuggesterMatcherService {
     $this->caching_enabled = $caching_enabled;
     $this->mappings = $this->downloadMappings();
   }
-  
+
   // Get the rules from Google or use a local copy (if not stale).
   function downloadMappings() {
     $source_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vROYRO7yLj6h_cZ3pzOH46sRLXxL3ZLrPfyOTlD23LhfIncguJ7QYjR5DuRd0IiBrgacmtNjC6nqyXs/pub?output=tsv';
@@ -76,12 +76,12 @@ class SupportSuggesterMatcherService {
     $rows = explode("\n", $result);
     foreach ($rows as $row_num => $row_data) {
       @list($status, , $match_mode, $match_string, $title, $url) = explode("\t", trim($row_data));
-      
+
       // Filter by status.
-      if (!in_array(trim($status), $this->status_filter)) {
+      if (!empty($this->status_filter) && !in_array(trim($status), $this->status_filter)) {
         continue;
       }
-      
+
       // Send into data array.
       $data[] = [
         'row_num' => $row_num,
@@ -96,7 +96,7 @@ class SupportSuggesterMatcherService {
     #echo "Loaded " . count($data) . " rules for matching\n";
     return $data;
   }
-  
+
   // Test all rules against string and try to get matches
   function getMatches($haystack) {
     $matches = [];

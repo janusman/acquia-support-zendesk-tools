@@ -9,11 +9,27 @@ require '../zendesk_api.php.inc';
 require 'ZendeskTicketProcessor.php';
 require 'SupportSuggesterMatchingService.php';
 
+function output_color($color, $msg) {
+  $colors = [
+    'green' => "\e[1;32;40m",
+    'blue' => "\e[0;34;40m",
+    'bluebackground' => "\e[0;30;44m",
+    'yellow' => "\e[1;33;40m",
+    'none' => "\e[0m"
+  ];
+  if (isset($colors[$color])) {
+    echo $colors[$color] . $msg . $colors['none'] . PHP_EOL;
+  }
+  else {
+    echo $msg . PHP_EOL;
+  }
+}
+
 function get_zd_tickets_using_query($query) {
-  echo "Getting tickets with query:\n  $query\n";
+  output_color("green","Getting tickets with query:\n  $query");
   $tickets = zendesk_search_tickets($query);
   if (isset($tickets->error)) {
-    echo "ERROR: Zendesk search failed with error.\n";
+    output_color("red", "ERROR: Zendesk search failed with error.");
     die();
   }
   echo "Found " . count($tickets->results) . " tickets.\n";
@@ -77,8 +93,8 @@ function run_process_on_matching_tickets($query) {
     #  continue;
     #}
 
-    echo "[ZD {$ticket->id}] : Processing ticket: \"" . substr($ticket->subject, 0, 80) . "\"\n";
-    echo "              https://acquia.zendesk.com/agent/tickets/{$ticket->id}\n";
+    output_color("yellow","[ZD {$ticket->id}] : Processing ticket: \"" . substr($ticket->subject, 0, 80) . "\"");
+    output_color("yellow", "               https://acquia.zendesk.com/agent/tickets/{$ticket->id}");
 
     // Run the matching service.
     attempt_ticket_match_against_support_ticket_suggester($matcher_service, $ticket);

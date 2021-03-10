@@ -5,3 +5,5 @@
 .idea/
 *.gz
 .swp
+tmp/*
+ticket-analysis/*

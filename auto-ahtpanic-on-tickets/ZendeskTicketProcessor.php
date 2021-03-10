@@ -151,6 +151,10 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
 
   // Make sure any example URL used belongs to an Acquia site
   function domainIsAcquiaHosted($domain) {
+    // Filter out *.acsitefactory domains.
+    if (strpos($domain, ".acsitefactory.com") !== FALSE) {
+      return false;
+    }
     $not_acquia = exec('aht find:domain ' . $domain .' --no-ansi |grep -c "not found"');
     return ($not_acquia == "0");
   }
