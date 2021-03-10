@@ -155,7 +155,7 @@ function zendesk_post_file($source_file, $human_short_filename, $uploads_token=n
 }
 
 function zendesk_post_comment_and_file($ticket_number, $comment_body, $infile, $is_public = false) {
-  echo "Trying to upload file $infile into ticket...\n";
+  echo "Trying to upload file file://$infile into ticket...\n";
   $human_short_filename = basename($infile);
   $result = zendesk_post_file($infile, $human_short_filename);
   if (isset($result->upload)) {

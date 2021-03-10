@@ -35,4 +35,4 @@ echo `date`": Process seems stuck! Running since $minutes minutes ago. Killing..
 pid=`ps -eo etime,pid,cmd |grep "[p]hp -f auto-ahtpanic-on-tickets.php" |awk '{print $2 }'`
 kill -9 $pid
 echo `date`": Killed process $pid"
-
+notify-send -i terminal "check-ticket-watcher: Killed long-running task ($minutes min)"
