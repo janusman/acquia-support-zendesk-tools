@@ -1,0 +1,2 @@
+#!/bin/bash 
+ack --group --color "$2" `find /mnt/tmp/ZendeskTicketProcessor/ -mtime -$1 -name "*summary.txt"` |sed -e 's%/mnt/tmp/%file:///mnt/tmp/%' -e 's/-summary.txt/.html/'

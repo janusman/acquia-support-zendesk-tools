@@ -152,9 +152,9 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
   // Make sure any example URL used belongs to an Acquia site
   function domainIsAcquiaHosted($domain) {
     // Filter out *.acsitefactory domains.
-    if (strpos($domain, ".acsitefactory.com") !== FALSE) {
-      return false;
-    }
+    #if (strpos($domain, ".acsitefactory.com") !== FALSE) {
+    #  return false;
+    #}
     $not_acquia = exec('aht find:domain ' . $domain .' --no-ansi |grep -c "not found"');
     return ($not_acquia == "0");
   }
@@ -330,19 +330,22 @@ class ZendeskTicketProcessorAhtpanicrunner extends ZendeskTicketProcessor {
       return false;
     }
 
-    if (!file_exists("{$output_basename}.txt")) {
-      $cmd = "ahtpanic.sh";
-      $cmd .= " " . $this->storage['url'];
-      $cmd .= " --summary-file={$output_basename}-summary.txt";
-      $cmd .= " 2>&1 >{$output_basename}.txt";
+    if (file_exists("{$output_basename}.txt")) {
+      $this->log("File {$output_basename}.txt already exists. This ticket may be currently being processed. If not, remove this file and run again.");
+      return FALSE;
+    }
+    
+    $cmd = "ahtpanic.sh";
+    $cmd .= " " . $this->storage['url'];
+    $cmd .= " --summary-file={$output_basename}-summary.txt";
+    $cmd .= " 2>&1 >{$output_basename}.txt";
 
-      // Execute with a timeout of 300.
-      $command_result = $this->runCommandWithTimeout($cmd, 300);
+    // Execute with a timeout of 300.
+    $command_result = $this->runCommandWithTimeout($cmd, 300);
 
-      if ($command_result['timed_out']) {
-        $this->log("Command timed out!");
-        return FALSE;
-      }
+    if ($command_result['timed_out']) {
+      $this->log("Command timed out!");
+      return FALSE;
     }
 
     if (exec("grep -c 'You do not have an open connection to the server' {$output_basename}.txt") != '0') {

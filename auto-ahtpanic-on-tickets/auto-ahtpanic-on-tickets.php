@@ -3,7 +3,7 @@
 // This script queries the ticket queue once, determines tickets to put comments in
 // and adds them.
 
-define('HOURS_BACK', 3);
+define('HOURS_BACK', 72);
 
 require '../zendesk_api.php.inc';
 require 'ZendeskTicketProcessor.php';
@@ -118,7 +118,7 @@ function main() {
     // Only recent tickets...
     $query = ' created>=' . gmdate('Y-m-d\TH:00:00\Z', time() - (3600 * HOURS_BACK));
     // Ticket types we want...
-    $query .= ' status<solved type:ticket priority>=normal -tags:bulk_created -tags:waiting:ops_maint -tags:p:mautic -tags:p:agilone';
+    $query .= ' status<solved type:ticket priority>=normal -gc:fs -tags:notification -tags:bulk_created -tags:waiting:ops_maint -tags:p:mautic -tags:p:agilone -tags:agilone -tags:agilone_legacy_user';
     // Queue we want...
     $query .= " " . $group;
     // Omit tickets that we've already touched.
@@ -128,7 +128,7 @@ function main() {
   }
 
   // Run on manual invocations that mention $magic_words, but created <$days ago.
-  $magic_words = [ '@makeitso', '+tags:assist_req'];
+  $magic_words = [ '@makeitso OR @alejandrobot', '+tags:assist_req'];
   $days = 15;
   foreach ($magic_words as $magic_word) {
     $query = $magic_word . ' status<=closed -@xvr10000 created>=' . gmdate('Y-m-d\TH:00:00\Z', time() - (3600 * 24 * $days));
